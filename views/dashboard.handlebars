@@ -1,0 +1,56 @@
+<h1>Dashboard KanbanPro</h1>
+
+<button id="cargar">Cargar mis tableros</button>
+
+<div id="contenido"></div>
+
+<script>
+document.getElementById('cargar').addEventListener('click', async () => {
+  const token = localStorage.getItem('token');
+
+  const res = await fetch('/api/tableros', {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  const data = await res.json();
+  console.log(data);
+
+  const contenedor = document.getElementById('contenido');
+
+  if (!res.ok) {
+    contenedor.innerHTML = `<p>${data.error}</p>`;
+    return;
+  }
+
+  contenedor.innerHTML = '';
+
+  data.forEach(tablero => {
+    const divTablero = document.createElement('div');
+    divTablero.innerHTML = `<h2>${tablero.nombre}</h2>`;
+
+    if (tablero.Lista && tablero.Lista.length > 0) {
+      tablero.Lista.forEach(lista => {
+        const divLista = document.createElement('div');
+        divLista.innerHTML = `<h3>${lista.nombre}</h3>`;
+
+        const ul = document.createElement('ul');
+
+        if (lista.Tarjeta && lista.Tarjeta.length > 0) {
+          lista.Tarjeta.forEach(tarjeta => {
+            const li = document.createElement('li');
+            li.textContent = `${tarjeta.titulo} - ${tarjeta.descripcion || ''}`;
+            ul.appendChild(li);
+          });
+        }
+
+        divLista.appendChild(ul);
+        divTablero.appendChild(divLista);
+      });
+    }
+
+    contenedor.appendChild(divTablero);
+  });
+});
+</script>

@@ -1,0 +1,39 @@
+<h1>Login</h1>
+
+<form id="loginForm">
+  <input type="email" id="email" placeholder="Correo" required>
+  <input type="password" id="password" placeholder="Contraseña" required>
+  <button type="submit">Iniciar sesión</button>
+</form>
+
+<p id="mensaje"></p>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    localStorage.setItem('token', data.token);
+    document.getElementById('mensaje').textContent = 'Login correcto';
+
+    setTimeout(() => {
+      window.location.href = '/dashboard-client';
+    }, 1000);
+  } else {
+    document.getElementById('mensaje').textContent = data.error;
+  }
+});
+</script>

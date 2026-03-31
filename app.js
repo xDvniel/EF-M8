@@ -1,106 +1,37 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { engine } = require('express-handlebars');
+require('dotenv').config();
+
+const { sequelize } = require('./models');
+const authRoutes = require('./routes/authRoutes');
+const apiRoutes = require('./routes/apiRoutes');
+const viewRoutes = require('./routes/viewRoutes');
 
 const app = express();
-const PORT = 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-const SECRET_KEY = 'clave_super_secreta_123';
+app.engine('handlebars', engine());
+app.set('view engine', 'handlebars');
+app.set('views', './views');
 
-const users = [];
+app.use('/api/auth', authRoutes);
+app.use('/api', apiRoutes);
+app.use('/', viewRoutes);
 
 app.get('/', (req, res) => {
-  res.send('Servidor funcionando correctamente');
+  res.send('KanbanPro API funcionando');
 });
 
-app.post('/register', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Faltan datos' });
-    }
-
-    const existe = users.find(u => u.username === username);
-
-    if (existe) {
-      return res.status(409).json({ error: 'Usuario ya existe' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    users.push({
-      username,
-      password: hashedPassword
+sequelize.sync({ alter: true })
+  .then(() => {
+    console.log('Base de datos sincronizada');
+    app.listen(process.env.PORT || 3000, () => {
+      console.log(`Servidor en http://localhost:${process.env.PORT || 3000}`);
     });
-
-    console.log('Usuarios:', users);
-
-    res.status(201).json({ mensaje: 'Usuario registrado' });
-
-  } catch (error) {
-    res.status(500).json({ error: 'Error en registro' });
-  }
-});
-
-app.post('/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    const user = users.find(u => u.username === username);
-
-    if (!user) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    const match = await bcrypt.compare(password, user.password);
-
-    if (!match) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    const token = jwt.sign(
-      { username: user.username },
-      SECRET_KEY,
-      { expiresIn: '1h' }
-    );
-
-    res.json({ token });
-
-  } catch (error) {
-    res.status(500).json({ error: 'Error en login' });
-  }
-});
-
-function verificarToken(req, res, next) {
-  const auth = req.headers['authorization'];
-
-  if (!auth || !auth.startsWith('Bearer ')) {
-    return res.status(403).json({ error: 'Token requerido' });
-  }
-
-  const token = auth.split(' ')[1];
-
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.usuario = decoded;
-    next();
-  } catch (error) {
-    res.status(403).json({ error: 'Token inválido' });
-  }
-}
-
-app.get('/perfil', verificarToken, (req, res) => {
-  res.json({
-    mensaje: 'Acceso correcto',
-    usuario: req.usuario
+  })
+  .catch((error) => {
+    console.error('Error al conectar la BD:', error);
   });
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor en http://localhost:${PORT}`);
-});
